@@ -1,7 +1,14 @@
 import { useRef, useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { pipeline, SummarizationPipeline, SummarizationSingle } from "@huggingface/transformers";
+import {
+  pipeline,
+  SummarizationPipeline,
+  SummarizationSingle,
+  AutoModelForSeq2SeqLM,
+  AutoTokenizer,
+  AutoProcessor,
+} from "@huggingface/transformers";
 
 const text =
   "The tower is 324 metres (1,063 ft) tall, about the same height as an 81-storey building, " +
@@ -18,6 +25,8 @@ function App() {
   const [output, setOutput] = useState("");
   const [pending, setPending] = useState(false);
   const generatorRef = useRef<SummarizationPipeline | null>(null);
+  const modelRef = useRef<AutoModelForSeq2SeqLM | null>(null);
+  const tokenizerRef = useRef<AutoTokenizer | null>(null);
 
   const handleRun = async () => {
     try {
@@ -71,6 +80,85 @@ function App() {
       const output = (summary[0] as unknown as SummarizationSingle).summary_text;
       setOutput(output);
     } catch (e) {
+      console.error(e);
+      alert(e);
+    } finally {
+      setPending(false);
+    }
+  };
+
+  const handleRunWithoutPipeline = async () => {
+    try {
+      setPending(true);
+      if (!tokenizerRef.current || !modelRef.current) {
+        console.log("create pipeline start");
+        // @ts-expect-error TS7006
+        const progress_callback = data => {
+          switch (data.status) {
+            case "initiate":
+              {
+                const { name, file } = data;
+                console.log("initiate", name, file);
+              }
+              break;
+            case "download":
+              {
+                const { name, file } = data;
+                console.log("download", name, file);
+              }
+              break;
+            case "progress":
+              {
+                const { name, file, progress, loaded, total } = data;
+                console.log("progress", name, file, progress, loaded, total);
+              }
+              break;
+            case "done":
+              {
+                const { name, file } = data;
+                console.log("done", name, file);
+              }
+              break;
+            case "ready":
+              {
+                const { task, model } = data;
+                console.log("ready", task, model);
+              }
+              break;
+          }
+        };
+
+        const config = {
+          progress_callback,
+          device: "webgpu",
+          dtype: "fp32",
+        };
+        // @ts-expect-error TS2345
+        modelRef.current = await AutoModelForSeq2SeqLM.from_pretrained("Xenova/distilbart-cnn-6-6", config);
+        tokenizerRef.current = await AutoTokenizer.from_pretrained("Xenova/distilbart-cnn-6-6");
+        console.log("create pipeline done");
+      }
+      const start = Date.now();
+
+      // @ts-expect-error TS2349
+      const inputs = await tokenizerRef.current([text], {
+        max_length: 1024,
+        truncation: true,
+        return_tensors: true,
+      });
+      // @ts-expect-error TS2349
+      const modelOutputs = await modelRef.current.generate(inputs);
+      // @ts-expect-error TS2349
+      const summary = await tokenizerRef.current.batch_decode(modelOutputs, {
+        skip_special_tokens: true,
+      });
+
+      const end = Date.now();
+      console.log(`推理时间: ${end - start}ms`);
+      const output = summary[0];
+      setOutput(output);
+    } catch (e) {
+      console.error(e);
       alert(e);
     } finally {
       setPending(false);
