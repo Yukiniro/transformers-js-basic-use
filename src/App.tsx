@@ -190,7 +190,7 @@ function App() {
             </div>
           </div>
           <div className="space-y-2">
-            <Button className="w-32" onClick={handleRunWithoutPipeline} disabled={pending}>
+            <Button className="w-32" onClick={handleRun} disabled={pending}>
               {pending ? "推理中..." : "推理"}
             </Button>
           </div>
