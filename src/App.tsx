@@ -7,7 +7,6 @@ import {
   SummarizationSingle,
   AutoModelForSeq2SeqLM,
   AutoTokenizer,
-  AutoProcessor,
 } from "@huggingface/transformers";
 
 const text =
@@ -87,6 +86,7 @@ function App() {
     }
   };
 
+  // @ts-expect-error TS6133
   const handleRunWithoutPipeline = async () => {
     try {
       setPending(true);
