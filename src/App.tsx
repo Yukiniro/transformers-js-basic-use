@@ -189,10 +189,11 @@ function App() {
               </div>
             </div>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 flex flex-col items-center justify-center">
             <Button className="w-32" onClick={handleRun} disabled={pending}>
               {pending ? "推理中..." : "推理"}
             </Button>
+            {pending && <span>第一次推理需要下载模型（只会下载一次），请耐心等待...</span>}
           </div>
         </div>
       </div>
